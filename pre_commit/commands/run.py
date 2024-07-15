@@ -286,6 +286,14 @@ def _run_hooks(
         args: argparse.Namespace,
 ) -> int:
     """Actually run the hooks."""
+    has_ddtrace = False
+    try:
+        import ddtrace
+        has_ddtrace = True
+        dd_log = logging.getLogger('ddtrace')
+        dd_log.setLevel(logging.CRITICAL)
+    except ImportError:
+        pass
     cols = _compute_cols(hooks)
     classifier = Classifier.from_config(
         _all_filenames(args), config['files'], config['exclude'],
@@ -293,10 +301,20 @@ def _run_hooks(
     retval = 0
     prior_diff = _get_diff()
     for hook in hooks:
-        current_retval, prior_diff = _run_single_hook(
+        run_hook = functools.partial(
+            _run_single_hook,
             classifier, hook, skips, cols, prior_diff,
             verbose=args.verbose, use_color=args.color,
         )
+        if not has_ddtrace:
+            current_retval, prior_diff = run_hook()
+        else:
+            with ddtrace.tracer.trace('run-hook', resource=hook.name) as span:
+                span.set_tags({
+                    'language': hook.language,
+                    'language-version': hook.language_version,
+                })
+                current_retval, prior_diff = run_hook()
         retval |= current_retval
         if current_retval and (config['fail_fast'] or hook.fail_fast):
             break
