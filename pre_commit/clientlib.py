@@ -148,14 +148,16 @@ class DeprecatedStagesWarning(NamedTuple):
         val = dct[self.key]
         cfgv.check_array(cfgv.check_any)(val)
 
-        legacy_stages = [stage for stage in val if stage in _STAGES]
-        if legacy_stages:
-            logger.warning(
-                f'hook id `{dct["id"]}` uses deprecated stage names '
-                f'({", ".join(legacy_stages)}) which will be removed in a '
-                f'future version.  '
-                f'run: `pre-commit migrate-config` to automatically fix this.',
-            )
+        # # Just make this quiet since we (CDX) are aware of this. We will update the stage names a few weeks
+        # after the migration to the latest version rolls out.
+        # legacy_stages = [stage for stage in val if stage in _STAGES]
+        # if legacy_stages:
+        #     logger.warning(
+        #         f'hook id `{dct["id"]}` uses deprecated stage names '
+        #         f'({", ".join(legacy_stages)}) which will be removed in a '
+        #         f'future version.  '
+        #         f'run: `pre-commit migrate-config` to automatically fix this.',
+        #     )
 
     def apply_default(self, dct: dict[str, Any]) -> None:
         pass
