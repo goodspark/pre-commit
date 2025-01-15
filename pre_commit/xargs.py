@@ -5,6 +5,9 @@ import contextlib
 import math
 import multiprocessing
 import os
+import re
+import select
+import shutil
 import subprocess
 import sys
 from collections.abc import Generator
@@ -18,6 +21,7 @@ from typing import TypeVar
 from pre_commit import parse_shebang
 from pre_commit.util import cmd_output_b
 from pre_commit.util import cmd_output_p
+from pre_commit.output import stdout_lock
 
 TArg = TypeVar('TArg')
 TRet = TypeVar('TRet')
@@ -128,6 +132,41 @@ def _thread_mapper(maxsize: int) -> Generator[
             yield ex.map
 
 
+def stream_subprocess_output(cmd, **kwargs) -> Generator[tuple[bytes, int | None], None, None]:
+    """
+    Run `cmd` as a subprocess and yield (chunk, returncode) tuples as output becomes available.
+    Merged stdout + stderr (because of stderr=STDOUT).
+    returncode is None until the process completes.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        **kwargs,
+    )
+
+    try:
+        while True:
+            process_done = (proc.poll() is not None)
+
+            if not process_done:
+                ready, _, _ = select.select([proc.stdout], [], [], 0.1)
+                if not ready:
+                    continue
+
+            chunk = proc.stdout.read1(1024)
+            if chunk:
+                yield chunk, None
+            else:
+                if process_done:
+                    break
+    finally:
+        proc.stdout.close()
+        proc.wait()
+        # Yield one final time with the returncode
+        yield b'', proc.returncode
+
+
 def xargs(
         cmd: tuple[str, ...],
         varargs: Sequence[str],
@@ -135,6 +174,7 @@ def xargs(
         color: bool = False,
         target_concurrency: int = 1,
         _max_length: int = _get_platform_max_length(),
+        stream_output: bool | None = None,
         **kwargs: Any,
 ) -> tuple[int, bytes]:
     """A simplified implementation of xargs.
@@ -168,9 +208,43 @@ def xargs(
     def run_cmd_partition(
             run_cmd: tuple[str, ...],
     ) -> tuple[int, bytes, bytes | None]:
-        return cmd_fn(
-            *run_cmd, check=False, stderr=subprocess.STDOUT, **kwargs,
-        )
+        if not stream_output:
+            return cmd_fn(
+                *run_cmd, check=False, stderr=subprocess.STDOUT, **kwargs,
+            )
+
+        output = b''
+        returncode = 0
+
+        with stdout_lock:
+            sys.stdout.buffer.write(b'\n')
+            sys.stdout.buffer.flush()
+
+        for chunk, maybe_returncode in stream_subprocess_output(cmd):
+            output += chunk
+            with stdout_lock:
+                sys.stdout.buffer.write(chunk)
+                sys.stdout.buffer.flush()
+            if maybe_returncode is not None:
+                returncode = maybe_returncode
+
+        terminal_width = shutil.get_terminal_size((80, 20)).columns
+        strip_ansi = re.compile(rb'\x1B\[[0-?]*[ -/]*[@-~]')
+        plain_output = strip_ansi.sub(b'', output)
+        standard_lines = plain_output.split(b'\n')
+        line_count = 0
+
+        for line in standard_lines:
+            displayed_width = max(1, len(line))
+            line_count += math.ceil(displayed_width / terminal_width)
+
+        with stdout_lock:
+            sys.stdout.buffer.write(b'\0337')  # Save cursor position
+            # Move cursor back to original line and move 73 columns to the right, where the status result begins
+            sys.stdout.buffer.write(f'\033[{line_count}A\033[73C'.encode())
+            sys.stdout.buffer.flush()
+        
+        return returncode, output, None
 
     threads = min(len(partitions), target_concurrency)
     with _thread_mapper(threads) as thread_map:
