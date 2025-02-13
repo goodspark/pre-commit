@@ -281,6 +281,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             'or exit with a failure code.'
         ),
     )
+    install_parser.add_argument('--pro', action='store_true', default=False)
 
     install_hooks_parser = _add_cmd(
         'install-hooks',
@@ -352,6 +353,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     hook_impl_parser.add_argument(
         '--skip-on-missing-config', action='store_true',
     )
+    hook_impl_parser.add_argument('--manual', action='store_true')
+    hook_impl_parser.add_argument('--ignore-unstaged', action='store_true', default=False)
+    hook_impl_parser.add_argument('--all-commits', action='store_true')
     hook_impl_parser.add_argument(dest='rest', nargs=argparse.REMAINDER)
 
     # argparse doesn't really provide a way to use a `default` subparser
@@ -393,6 +397,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 hook_type=args.hook_type,
                 hook_dir=args.hook_dir,
                 skip_on_missing_config=args.skip_on_missing_config,
+                manual=args.manual,
+                ignore_unstaged=args.ignore_unstaged,
+                all_commits=args.all_commits,
                 args=args.rest[1:],
             )
         elif args.command == 'install':
@@ -402,6 +409,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 overwrite=args.overwrite,
                 hooks=args.install_hooks,
                 skip_on_missing_config=args.allow_missing_config,
+                pro=args.pro,
             )
         elif args.command == 'init-templatedir':
             return init_templatedir(
