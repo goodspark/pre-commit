@@ -74,7 +74,7 @@ class Monitor:
     def report_metrics(self) -> None:
         if self.report_command:
             root = git.get_root()
-            metrics_file = Path(root) / 'discord_clyde' / '.metrics.json'
+            metrics_file = Path(root) / 'discord_clyde' / '.precommit-metrics.json'
             with open(metrics_file, 'w') as f:
                 json.dump([record.for_json() for record in self.records], f)
             normalized_command = list(parse_shebang.normalize_cmd(tuple(self.report_command)))
