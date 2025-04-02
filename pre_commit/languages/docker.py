@@ -138,6 +138,7 @@ def run_hook(
         color: bool,
         stream_output: Optional[bool],
         start_msg: Optional[str],
+        terminal_width: int,
 ) -> tuple[int, bytes]:  # pragma: win32 no cover
     # Rebuild the docker image in case it has gone missing, as many people do
     # automated cleanup of docker images.
@@ -153,5 +154,6 @@ def run_hook(
         color=color,
         stream_output=stream_output,
         start_msg=start_msg,
+        terminal_width=terminal_width,
     )
 

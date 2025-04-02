@@ -7,6 +7,7 @@ import logging
 import os
 import platform
 import re
+import shutil
 import subprocess
 import time
 import unicodedata
@@ -150,6 +151,7 @@ def _run_single_hook(
         verbose: bool,
         use_color: bool,
         stage: str,
+        terminal_width: int,
 ) -> tuple[bool, bytes]:
     filenames = tuple(classifier.filenames_for_hook(hook))
 
@@ -188,6 +190,7 @@ def _run_single_hook(
                     color=use_color,
                     stream_output=hook.stream_output,
                     start_msg=start_msg,
+                    terminal_width=terminal_width,
                 )
             duration = round(time.monotonic() - time_before, 2) or 0
             diff_after = _get_diff()
@@ -313,6 +316,7 @@ def _run_hooks(
 ) -> int:
     """Actually run the hooks."""
     cols = _compute_cols(hooks)
+    terminal_width, _ = shutil.get_terminal_size()
     classifier = Classifier.from_config(
         _all_filenames(args, manual, staged, unstaged), config['files'], config['exclude'],
     )
@@ -323,6 +327,7 @@ def _run_hooks(
             classifier, hook, skips, cols, prior_diff,
             verbose=args.verbose, use_color=args.color,
             stage=args.hook_stage,
+            terminal_width=terminal_width,
         )
         retval |= current_retval
         if current_retval and (config['fail_fast'] or hook.fail_fast):

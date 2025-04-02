@@ -25,6 +25,7 @@ def run_hook(
         color: bool,
         stream_output: Optional[bool],
         start_msg: Optional[str],
+        terminal_width: int,
 ) -> tuple[int, bytes]:  # pragma: win32 no cover
     cmd = docker_cmd(color=color) + lang_base.hook_cmd(entry, args)
     return lang_base.run_xargs(
@@ -34,4 +35,5 @@ def run_hook(
         color=color,
         stream_output=stream_output,
         start_msg=start_msg,
+        terminal_width=terminal_width,
     )

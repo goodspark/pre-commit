@@ -58,6 +58,7 @@ class Language(Protocol):
             color: bool,
             stream_output: Optional[bool],
             start_msg: Optional[str],
+            terminal_width: int,
     ) -> tuple[int, bytes]:
         ...
 
@@ -163,6 +164,7 @@ def run_xargs(
         color: bool,
         stream_output: Optional[bool],
         start_msg: Optional[str],
+        terminal_width: int,
 ) -> tuple[int, bytes]:
     if require_serial:
         jobs = 1
@@ -179,6 +181,7 @@ def run_xargs(
         color=color,
         stream_output=stream_output,
         start_msg=start_msg,
+        env={'COLUMNS': str(terminal_width)},
     )
 
 
@@ -197,6 +200,7 @@ def basic_run_hook(
         color: bool,
         stream_output: Optional[bool],
         start_msg: Optional[str],
+        terminal_width: int,
 ) -> tuple[int, bytes]:
     return run_xargs(
         hook_cmd(entry, args),
@@ -205,4 +209,5 @@ def basic_run_hook(
         color=color,
         stream_output=stream_output,
         start_msg=start_msg,
+        terminal_width=terminal_width,
     )

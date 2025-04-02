@@ -30,6 +30,7 @@ def run_hook(
         color: bool,
         stream_output: Optional[bool],
         start_msg: Optional[str],
+        terminal_width: int,
 ) -> tuple[int, bytes]:
     # `entry` is a (hook-repo relative) file followed by (optional) args, e.g.
     # `bin/id.jl` or `bin/hook.jl --arg1 --arg2` so we
@@ -48,6 +49,7 @@ def run_hook(
         color=color,
         stream_output=stream_output,
         start_msg=start_msg,
+        terminal_width=terminal_width,
     )
 
 

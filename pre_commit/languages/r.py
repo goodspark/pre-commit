@@ -247,6 +247,7 @@ def run_hook(
         color: bool,
         stream_output: Optional[bool],
         start_msg: Optional[str],
+        terminal_width: int,
 ) -> tuple[int, bytes]:
     cmd = _cmd_from_hook(prefix, entry, args, is_local=is_local)
     return lang_base.run_xargs(
@@ -256,4 +257,5 @@ def run_hook(
         color=color,
         stream_output=stream_output,
         start_msg=start_msg,
+        terminal_width=terminal_width,
     )
